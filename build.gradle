@@ -1,18 +1,60 @@
 apply plugin: 'java'
+apply plugin: 'war'
+apply plugin: 'groovy'
+apply plugin: 'jacoco'
+apply plugin: 'war'
+
+sourceCompatibility = 1.8
 
 repositories {
-  mavenCentral()
+    mavenCentral()
+}
+
+// Fills out all dependencies which are necessary to start the embedded jetty from war file
+configurations {
+    jetty
 }
 
 dependencies {
-  compile group: 'org.eclipse.jetty', name: 'jetty-server', version: '9.3.10.v20160621'
-  compile group: 'org.eclipse.jetty', name: 'jetty-servlet', version: '9.3.10.v20160621'
-  
-  compile group: 'org.eclipse.jetty.websocket', name: 'websocket-server', version: '9.3.10.v20160621'
-  compile group: 'org.eclipse.jetty.websocket', name: 'javax-websocket-server-impl', version: '9.3.10.v20160621'
 
-  compile group: 'org.eclipse.jetty.websocket', name: 'websocket-servlet', version: '9.3.10.v20160621'
+    jetty 'org.eclipse.jetty:jetty-server:+'
+    jetty 'org.eclipse.jetty:jetty-servlet:+'
+    jetty 'org.eclipse.jetty:jetty-webapp:+'
+    jetty 'org.eclipse.jetty:jetty-jsp:+'
+    jetty 'org.eclipse.jetty:jetty-annotations:+'
 
+    compile group: 'org.eclipse.jetty', name: 'jetty-server', version: '9.3.10.v20160621'
+    compile group: 'org.eclipse.jetty', name: 'jetty-servlet', version: '9.3.10.v20160621'
+    compile group: 'org.eclipse.jetty.websocket', name: 'websocket-server', version: '9.3.10.v20160621'
+    compile group: 'org.eclipse.jetty.websocket', name: 'javax-websocket-server-impl', version: '9.3.10.v20160621'
+    compile group: 'org.eclipse.jetty.websocket', name: 'websocket-servlet', version: '9.3.10.v20160621'
 
-  testCompile 'junit:junit:4.11'
+    testCompile group: 'org.spockframework', name: 'spock-core', version: '1.0-groovy-2.4'
+    testRuntime group: 'com.athaydes', name: 'spock-reports', version: "1.2.10"
+
+}
+
+war {
+    // put all jetty dependencies needed for run into the root of war file
+    from {
+        configurations.jetty.collect {
+            project.zipTree(it)
+        }
+    }
+    // remove meta files after extraction
+    exclude "META-INF/*.SF", "META-INF/*.RSA", "about.html", "about_files/**", "readme.txt", "plugin.properties", "jetty-dir.css"
+
+    // add Launcher compiled class-files into the root of war file
+    from "$buildDir/classes/main"
+    exclude "ru/rgordeev/application/"
+
+    // add Main-Class attribute to MANIFEST.MF file and point it to the Launcher class
+    manifest { attributes 'Main-Class': 'ru.rgordeev.launcher.Launcher' }
+}
+
+jacocoTestReport {
+    reports {
+        xml.enabled = true
+        html.enabled = true
+    }
 }
